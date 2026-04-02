@@ -1,159 +1,324 @@
-.home-container {
-  width: 100%;
-  margin: 0;
-  padding: 0;
+/* ── Hero Header ── */
+.home-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-6);
 }
 
-.hero-section {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  width: 100%;
-  margin: 0;
-}
-
-.hero-section h1 {
-  font-size: 3.5rem;
-  margin: 0 0 1rem 0;
-  font-weight: 700;
+.hero-text h1 {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--space-1);
 }
 
 .hero-subtitle {
-  font-size: 1.25rem;
-  margin: 0 0 2rem 0;
-  opacity: 0.9;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
 }
 
-.hero-actions {
+.hero-time {
   display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
 }
 
-.cta-button {
-  padding: 1rem 2rem;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  text-decoration: none;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-block;
+/* ── Stats Strip ── */
+.stats-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
 }
 
-.cta-button.primary {
-  background-color: #3498db;
-  color: white;
+.strip-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
-.cta-button.primary:hover {
-  background-color: #2980b9;
-  transform: translateY(-2px);
+.strip-value {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.cta-button.secondary {
-  background-color: transparent;
-  color: white;
-  border: 2px solid white;
+.strip-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
-.cta-button.secondary:hover {
-  background-color: white;
-  color: #667eea;
-  transform: translateY(-2px);
+.strip-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-glass-hover);
 }
 
-.features-section {
-  padding: 3rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+.live-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.features-section h2 {
-  text-align: center;
-  font-size: 2.5rem;
-  margin-bottom: 3rem;
-  color: #2c3e50;
-}
-
-.features-grid {
+/* ── Bento Grid ── */
+.bento-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
 }
 
-.feature-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-  border: 1px solid #e0e0e0;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+.bento-card {
+  position: relative;
+  overflow: hidden;
 }
 
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.bento-wide {
+  grid-column: span 3;
 }
 
-.feature-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+.bento-square {
+  grid-column: span 1;
 }
 
-.feature-card h3 {
-  color: #2c3e50;
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
+/* Card Header */
+.bento-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
 }
 
-.feature-card p {
-  color: #7f8c8d;
-  line-height: 1.6;
-  margin: 0;
+.bento-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bento-card-title h3 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.bento-card-title-simple {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.bento-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-success-dim);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+/* Route 10 Stats */
+.route10-stats {
+  display: flex;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.route10-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.route10-value {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.route10-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+/* Bento Action Link */
+.bento-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: gap var(--transition-base);
+}
+
+.bento-action:hover {
+  gap: var(--space-3);
+}
+
+/* ── Nav Card ── */
+.nav-card-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.nav-card-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: white;
+  flex-shrink: 0;
+}
+
+.icon-map {
+  background: linear-gradient(135deg, #0EA5E9, #06B6D4);
+}
+
+.icon-vehicles {
+  background: linear-gradient(135deg, #3B82F6, #0EA5E9);
+}
+
+.icon-routes {
+  background: linear-gradient(135deg, #06B6D4, #06D6A0);
+}
+
+.nav-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-card-text h3 {
+  font-size: var(--text-base);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.nav-card-text p {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.nav-card-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-base), color var(--transition-base);
+}
+
+.glass-interactive:hover .nav-card-arrow {
+  color: var(--text-primary);
+  transform: translateX(3px);
+}
+
+/* ── Fleet Bars ── */
+.fleet-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fleet-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fleet-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.fleet-bar-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fleet-bar-track {
+  height: 6px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.fleet-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+.bus-fill { background: var(--color-bus); }
+.tram-fill { background: var(--color-tram); }
+.trolley-fill { background: #F59E0B; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bento-wide {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 768px) {
-  .hero-section {
-    padding: 3rem 1rem;
-    margin: -2rem -1rem 2rem -1rem;
-  }
-  
-  .hero-section h1 {
-    font-size: 2.5rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 1.1rem;
-  }
-  
-  .hero-actions {
+  .home-hero {
     flex-direction: column;
-    align-items: center;
+    gap: var(--space-3);
   }
-  
-  .cta-button {
-    width: 200px;
+
+  .hero-text h1 {
+    font-size: var(--text-2xl);
   }
-  
-  .features-section h2 {
-    font-size: 2rem;
+
+  .stats-strip {
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
   }
-  
-  .features-grid {
+
+  .strip-value {
+    font-size: var(--text-lg);
+  }
+
+  .bento-grid {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
   }
-  
-  .feature-card {
-    padding: 1.5rem;
+
+  .bento-wide {
+    grid-column: span 1;
+  }
+
+  .route10-value {
+    font-size: var(--text-2xl);
   }
 }
