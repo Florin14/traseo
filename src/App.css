@@ -1,0 +1,23 @@
+.App {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  background-color: #f8f9fa;
+}
+
+/* Special layout for map page */
+.App:has([class*="map-container"]) main {
+  padding: 0;
+  background-color: transparent;
+}
+
+/* Reset some default styles */
+* {
+  box-sizing: border-box;
+}
