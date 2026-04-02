@@ -1,32 +1,46 @@
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Sidebar from './components/layout/Sidebar';
 import Home from './components/Home';
-import Vehicles from './components/Vehicles';
-import MapView from './components/Map';
-import RoutesPage from './components/Routes';
-import Favorites from './components/Favorites';
 import './App.css';
 
-function App() {
+// Lazy load heavy pages
+const MapView = lazy(() => import('./components/Map'));
+const Vehicles = lazy(() => import('./components/Vehicles'));
+const RoutesPage = lazy(() => import('./components/Routes'));
+const Favorites = lazy(() => import('./components/Favorites'));
+const Assistant = lazy(() => import('./components/Assistant'));
+
+const PageLoader = () => (
+  <div className="page-loader">
+    <div className="page-loader-spinner" />
+  </div>
+);
+
+function App({ onReady }) {
   const location = useLocation();
+
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
 
   return (
     <div className="app">
-      {/* Aurora animated background */}
       <div className="aurora-bg" />
-
       <Sidebar />
-
       <main className="main-content">
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home />} />
-            <Route path="/vehicles" element={<Vehicles />} />
-            <Route path="/map" element={<MapView />} />
-            <Route path="/routes" element={<RoutesPage />} />
-            <Route path="/favorites" element={<Favorites />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<Home />} />
+              <Route path="/vehicles" element={<Vehicles />} />
+              <Route path="/map" element={<MapView />} />
+              <Route path="/routes" element={<RoutesPage />} />
+              <Route path="/favorites" element={<Favorites />} />
+              <Route path="/assistant" element={<Assistant />} />
+            </Routes>
+          </Suspense>
         </AnimatePresence>
       </main>
     </div>

@@ -44,6 +44,12 @@
   overflow: hidden;
 }
 
+@media (max-width: 768px) {
+  .page-map {
+    height: calc(100vh - var(--navbar-height-mobile));
+  }
+}
+
 /* ── Page Header ── */
 .page-header {
   margin-bottom: var(--space-8);
@@ -62,6 +68,23 @@
 .page-header p {
   color: var(--text-secondary);
   font-size: var(--text-lg);
+}
+
+/* ── Page Loader (Suspense fallback) ── */
+.page-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.page-loader-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-glass);
+  border-top-color: var(--accent-mid);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 
 /* ── Responsive ── */

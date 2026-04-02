@@ -6,11 +6,20 @@ import './index.css';
 import App from './App.jsx';
 import store from './store';
 
+// Hide splash screen after React mounts
+function hideSplash() {
+  const splash = document.getElementById('splash');
+  if (splash) {
+    splash.classList.add('fade-out');
+    setTimeout(() => splash.remove(), 400);
+  }
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <App onReady={hideSplash} />
       </BrowserRouter>
     </Provider>
   </StrictMode>

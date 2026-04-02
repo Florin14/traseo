@@ -61,9 +61,12 @@ src/
 │   ├── Vehicles.jsx     # Vehicle list with route detail panel
 │   ├── Routes.jsx       # Routes with stops timeline + partial favorites
 │   ├── Favorites.jsx    # Saved routes & partial routes
+│   ├── Assistant.jsx    # Smart transit assistant (cost tracker, insights, route finder)
 │   └── *.css            # Component styles
 ├── hooks/
 │   ├── useFavorites.js  # localStorage favorites CRUD
+│   ├── useCostTracker.js # Trip cost logging + monthly stats + insights
+│   ├── useRouteFinder.js # Find routes connecting two stops
 │   └── useMapTheme.js   # Map tile theme switcher (dark/light/streets)
 ├── utils/
 │   ├── api.js           # Centralized API client
@@ -85,6 +88,8 @@ src/
   - Bus: #3B82F6, Tram: #10B981, Trolleybus: #F59E0B
 - Map: Default theme is "streets" (Voyager tiles with labels), switchable to dark/light
 - Favorites: localStorage with key `traseo_favorites`, supports route + partial_route types
+- Cost tracking: localStorage with key `traseo_trips`, ticket price 3 RON, monthly pass 100 RON
+- Route finder: finds direct routes between any two stops using stopTimes sequences
 
 ## Security
 - API key in `.env` (never committed, listed in `.gitignore`)
