@@ -32,38 +32,68 @@
 .user-location-wrap { background: transparent !important; border: none !important; }
 
 /* ── Direction Arrows ── */
-.direction-arrow-wrap { background: transparent !important; border: none !important; pointer-events: none !important; }
+.direction-arrow-wrap {
+  background: transparent !important;
+  border: none !important;
+  pointer-events: none !important;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+}
 
-.user-location-marker {
+/* ── User Location Pin ── */
+.user-pin-wrap { background: transparent !important; border: none !important; }
+
+.user-pin {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 42px;
 }
 
-.user-location-dot {
+.user-pin-head {
   position: absolute;
-  top: 50%;
+  top: 0;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
   background: #0EA5E9;
-  border: 2px solid white;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(14, 165, 233, 0.6);
-  z-index: 2;
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 0;
+  transform: translateX(-50%) rotate(-45deg);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.5);
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
-.user-location-ring {
+.user-pin-head::after {
+  content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  background: rgba(14, 165, 233, 0.2);
+  width: 10px;
+  height: 10px;
+  background: white;
   border-radius: 50%;
-  animation: pulse-live 2s ease-in-out infinite;
+}
+
+.user-pin-stem {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 14px;
+  background: linear-gradient(to bottom, #0EA5E9, transparent);
+}
+
+.user-pin-shadow {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 4px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 50%;
 }
 
 /* ── Floating Stats ── */
