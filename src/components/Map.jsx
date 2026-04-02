@@ -43,10 +43,15 @@ function getVehicleIcon(routeName, vehicleType, isActive) {
 }
 
 const userLocationIcon = L.divIcon({
-  html: '<div class="user-location-marker"><div class="user-location-dot"></div><div class="user-location-ring"></div></div>',
-  className: 'user-location-wrap',
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
+  html: `<div class="user-pin">
+    <div class="user-pin-head"></div>
+    <div class="user-pin-stem"></div>
+    <div class="user-pin-shadow"></div>
+  </div>`,
+  className: 'user-pin-wrap',
+  iconSize: [32, 42],
+  iconAnchor: [16, 42],
+  popupAnchor: [0, -42],
 });
 
 // Only close popups on map interaction, NOT panels
@@ -355,16 +360,23 @@ const MapView = () => {
           </>
         )}
 
-        {/* Route shape with direction arrows */}
+        {/* Route shape: outline + colored line + direction arrows */}
         {selectedRouteShape && (
           <>
+            {/* Dark outline for contrast on any map theme */}
             <Polyline
               positions={selectedRouteShape.points}
-              pathOptions={{ color: selectedRouteShape.color, weight: 4, opacity: 0.8 }}
+              pathOptions={{ color: '#000000', weight: 8, opacity: 0.4, lineCap: 'round', lineJoin: 'round' }}
             />
+            {/* Main colored line */}
+            <Polyline
+              positions={selectedRouteShape.points}
+              pathOptions={{ color: selectedRouteShape.color, weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }}
+            />
+            {/* Direction arrows on top */}
             <DirectionArrows
               points={selectedRouteShape.points}
-              color={selectedRouteShape.color}
+              color="#FFFFFF"
             />
           </>
         )}

@@ -25,12 +25,12 @@ function getArrowIcon(angle, color) {
   if (arrowCache[key]) return arrowCache[key];
 
   const icon = L.divIcon({
-    html: `<svg width="16" height="16" viewBox="0 0 16 16" style="transform:rotate(${angle}deg)">
-      <polygon points="8,2 13,12 8,9 3,12" fill="${color}" opacity="0.9"/>
+    html: `<svg width="18" height="18" viewBox="0 0 18 18" style="transform:rotate(${angle}deg)">
+      <polygon points="9,2 15,14 9,10 3,14" fill="${color}" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
     </svg>`,
     className: 'direction-arrow-wrap',
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
   });
 
   arrowCache[key] = icon;
