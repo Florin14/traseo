@@ -1,233 +1,282 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { getVehicles } from "../store/thunks/get_buses";
-import "./Vehicles.css";
+import { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, Search, Bus, TramFront, Zap, Gauge, Clock, X, ArrowRight, MapPin, Navigation } from 'lucide-react';
+import { fetchVehicles } from '../store/slices/vehiclesSlice';
+import { fetchRoutes } from '../store/slices/routesSlice';
+import { fetchTrips } from '../store/slices/tripsSlice';
+import { fetchStops } from '../store/slices/stopsSlice';
+import { fetchShapes } from '../store/slices/shapesSlice';
+import { getVehicleTypeName, getVehicleTypeBadgeClass, timeAgo, haversineDistance } from '../utils/helpers';
+import './Vehicles.css';
+
+const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.4, staggerChildren: 0.02 } },
+  exit: { opacity: 0, y: -10, transition: { duration: 0.2 } },
+};
+
+const cardVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+};
+
+// Estimate ETA: distance along shape / average speed
+function estimateETA(vehicle, stopLat, stopLon) {
+  if (!vehicle.latitude || !stopLat) return null;
+  const dist = haversineDistance(vehicle.latitude, vehicle.longitude, stopLat, stopLon);
+  const speed = vehicle.speed > 3 ? vehicle.speed : 15; // assume 15 km/h if stopped
+  const minutes = Math.round((dist / speed) * 60);
+  return Math.max(1, minutes);
+}
 
 const Vehicles = () => {
   const dispatch = useDispatch();
-  const {
-    data: vehicles,
-    loading,
-    error,
-  } = useSelector((state) => state.vehicles);
+  const { data: vehicles, loading } = useSelector((s) => s.vehicles);
+  const { data: routes } = useSelector((s) => s.routes);
+  const { data: trips } = useSelector((s) => s.trips);
+  const { data: stops } = useSelector((s) => s.stops);
+  const { data: stopTimesData } = useSelector((s) => s.shapes); // we'll use stops directly
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState(null);
+  const [selectedRoute, setSelectedRoute] = useState(null);
 
   useEffect(() => {
-    // Only fetch if we don't have data and aren't already loading
-    if (!vehicles?.length && !loading) {
-      dispatch(getVehicles());
+    if (!vehicles.length) dispatch(fetchVehicles());
+    if (!routes.length) dispatch(fetchRoutes());
+    if (!trips.length) dispatch(fetchTrips());
+    if (!stops.length) dispatch(fetchStops());
+  }, [dispatch, vehicles.length, routes.length, trips.length, stops.length]);
+
+  const routeMap = useMemo(() => {
+    const m = {};
+    routes.forEach((r) => { m[r.route_id] = r; });
+    return m;
+  }, [routes]);
+
+  const tripMap = useMemo(() => {
+    const m = {};
+    trips.forEach((t) => { m[t.trip_id] = t; });
+    return m;
+  }, [trips]);
+
+  // Group vehicles by route, sorted
+  const sortedVehicles = useMemo(() => {
+    let v = vehicles.filter((veh) => veh.latitude && veh.longitude && veh.route_id);
+    if (typeFilter !== null) v = v.filter((veh) => veh.vehicle_type === typeFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      v = v.filter((veh) => {
+        const route = routeMap[veh.route_id];
+        return (
+          veh.label?.toLowerCase().includes(q) ||
+          route?.route_short_name?.toLowerCase().includes(q) ||
+          route?.route_long_name?.toLowerCase().includes(q)
+        );
+      });
     }
-  }, [dispatch, vehicles?.length, loading]);
+    // Sort: active first (by route number asc), then inactive (by route number asc)
+    v.sort((a, b) => {
+      const aActive = a.speed > 0 ? 0 : 1;
+      const bActive = b.speed > 0 ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      const aRoute = routeMap[a.route_id];
+      const bRoute = routeMap[b.route_id];
+      const aNum = parseInt(aRoute?.route_short_name) || 999;
+      const bNum = parseInt(bRoute?.route_short_name) || 999;
+      if (aNum !== bNum) return aNum - bNum;
+      return (a.label || '').localeCompare(b.label || '');
+    });
+    return v;
+  }, [vehicles, typeFilter, search, routeMap]);
 
-  console.log("Vehicles data:", vehicles);
-  console.log(
-    "Route 10 vehicles:",
-    vehicles?.filter?.((vehicle) => vehicle.route_id === 10)
-  );
+  const activeCount = sortedVehicles.filter((v) => v.speed > 0).length;
 
-  if (loading) {
-    return (
-      <div className="vehicles-container">
-        <div className="loading">
-          <div className="spinner"></div>
-          <p>Loading vehicles...</p>
-        </div>
-      </div>
-    );
-  }
+  // When a vehicle card is clicked, show all vehicles on that route
+  const selectedRouteVehicles = useMemo(() => {
+    if (!selectedRoute) return [];
+    return vehicles
+      .filter((v) => v.route_id === selectedRoute.route_id && v.latitude && v.longitude)
+      .sort((a, b) => {
+        // Sort by direction, then by speed
+        const aTripDir = tripMap[a.trip_id]?.direction_id ?? 0;
+        const bTripDir = tripMap[b.trip_id]?.direction_id ?? 0;
+        if (aTripDir !== bTripDir) return aTripDir - bTripDir;
+        return b.speed - a.speed;
+      });
+  }, [selectedRoute, vehicles, tripMap]);
 
-  if (error) {
-    return (
-      <div className="vehicles-container">
-        <div className="error">
-          <h2>Error loading vehicles</h2>
-          <p>
-            {error.message ||
-              "Something went wrong while fetching vehicle data."}
-          </p>
-          <button
-            onClick={() => dispatch(getVehicles())}
-            className="retry-button"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!vehicles || vehicles.length === 0) {
-    return (
-      <div className="vehicles-container">
-        <div className="no-data">
-          <h2>No vehicles found</h2>
-          <p>There are currently no vehicles available to display.</p>
-          <button
-            onClick={() => dispatch(getVehicles())}
-            className="refresh-button"
-          >
-            Refresh
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleCardClick = (vehicle) => {
+    const route = routeMap[vehicle.route_id];
+    if (!route) return;
+    setSelectedRoute(selectedRoute?.route_id === route.route_id ? null : route);
+  };
 
   return (
-    <div className="vehicles-container">
-      <div className="vehicles-header">
-        <h1>Vehicle Fleet</h1>
-        <button
-          onClick={() => dispatch(getVehicles())}
-          className="refresh-button"
-        >
-          Refresh Data
-        </button>
-      </div>
+    <motion.div className="page" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+      <motion.div className="page-header" variants={cardVariants}>
+        <h1>Vehicule</h1>
+        <p>{sortedVehicles.length} vehicule &middot; {activeCount} active</p>
+      </motion.div>
 
-      <div className="vehicles-grid">
-        {Array.isArray(vehicles) ? (
-          vehicles.map((vehicle, index) => (
-            <div key={vehicle.id || index} className="vehicle-card">
-              <div className="vehicle-header">
-                <h3>
-                  {vehicle.label
-                    ? `Vehicle ${vehicle.label}`
-                    : `Vehicle ${index + 1}`}
-                </h3>
-                <span
-                  className={`status ${
-                    vehicle.speed > 0 ? "active" : "inactive"
-                  }`}
-                >
-                  {vehicle.speed > 0 ? "Active" : "Inactive"}
+      {/* Controls */}
+      <motion.div className="vehicles-controls" variants={cardVariants}>
+        <div className="search-box glass">
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Cauta vehicul sau ruta..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="type-filters">
+          <button className={`filter-chip ${typeFilter === null ? 'active' : ''}`} onClick={() => setTypeFilter(null)}>Toate</button>
+          <button className={`filter-chip bus-chip ${typeFilter === 3 ? 'active' : ''}`} onClick={() => setTypeFilter(typeFilter === 3 ? null : 3)}>
+            <Bus size={14} /> Autobuze
+          </button>
+          <button className={`filter-chip tram-chip ${typeFilter === 0 ? 'active' : ''}`} onClick={() => setTypeFilter(typeFilter === 0 ? null : 0)}>
+            <TramFront size={14} /> Tramvaie
+          </button>
+          <button className={`filter-chip trolley-chip ${typeFilter === 11 ? 'active' : ''}`} onClick={() => setTypeFilter(typeFilter === 11 ? null : 11)}>
+            <Zap size={14} /> Troleibuze
+          </button>
+        </div>
+        <button className="btn-ghost" onClick={() => dispatch(fetchVehicles())} disabled={loading}>
+          <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+          <span>Reincarca</span>
+        </button>
+      </motion.div>
+
+      {/* Route Detail Panel */}
+      <AnimatePresence>
+        {selectedRoute && (
+          <motion.div
+            className="route-detail-panel glass-card"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <div className="rdp-header">
+              <div className="rdp-title">
+                <span className="rdp-number mono" style={{
+                  color: selectedRoute.route_type === 0 ? 'var(--color-tram)'
+                    : selectedRoute.route_type === 11 ? '#F59E0B'
+                    : 'var(--color-bus)'
+                }}>
+                  {selectedRoute.route_short_name}
+                </span>
+                <div>
+                  <h3>{selectedRoute.route_long_name}</h3>
+                  <span className={`badge ${getVehicleTypeBadgeClass(selectedRoute.route_type)}`}>
+                    {getVehicleTypeName(selectedRoute.route_type)}
+                  </span>
+                </div>
+              </div>
+              <button className="rdp-close" onClick={() => setSelectedRoute(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="rdp-vehicles">
+              {selectedRouteVehicles.length === 0 ? (
+                <p className="rdp-empty">Niciun vehicul activ pe aceasta ruta.</p>
+              ) : (
+                selectedRouteVehicles.map((v) => {
+                  const trip = tripMap[v.trip_id];
+                  return (
+                    <div key={v.id} className="rdp-vehicle-row">
+                      <div className={`rdp-status-dot ${v.speed > 0 ? 'active' : 'inactive'}`} />
+                      <div className="rdp-vehicle-info">
+                        <span className="rdp-vehicle-label mono">#{v.label}</span>
+                        <div className="rdp-vehicle-direction">
+                          <Navigation size={12} />
+                          <span>{trip?.trip_headsign || 'Directie necunoscuta'}</span>
+                        </div>
+                      </div>
+                      <div className="rdp-vehicle-speed">
+                        <Gauge size={14} />
+                        <span className="mono">{v.speed} km/h</span>
+                      </div>
+                      <div className="rdp-vehicle-time">
+                        <Clock size={14} />
+                        <span>{timeAgo(v.timestamp)}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Grid */}
+      <motion.div className="vehicles-grid" variants={cardVariants}>
+        {sortedVehicles.map((vehicle) => {
+          const route = routeMap[vehicle.route_id];
+          const isActive = vehicle.speed > 0;
+          const trip = tripMap[vehicle.trip_id];
+          const isRouteSelected = selectedRoute?.route_id === vehicle.route_id;
+          return (
+            <motion.div
+              key={vehicle.id}
+              className={`vehicle-card glass-card ${isRouteSelected ? 'card-highlighted' : ''}`}
+              variants={cardVariants}
+              layout
+              onClick={() => handleCardClick(vehicle)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="vcard-top">
+                <div className="vcard-route">
+                  <span className="vcard-route-number mono">
+                    {route?.route_short_name || '—'}
+                  </span>
+                  <span className={`badge ${getVehicleTypeBadgeClass(vehicle.vehicle_type)}`}>
+                    {getVehicleTypeName(vehicle.vehicle_type)}
+                  </span>
+                </div>
+                <span className={`badge ${isActive ? 'badge-success' : 'badge-danger'}`}>
+                  {isActive ? 'Activ' : 'Stationat'}
                 </span>
               </div>
-              <div className="vehicle-details">
-                <p>
-                  <strong>Vehicle ID:</strong> {vehicle.id}
-                </p>
-                {vehicle.route_id && (
-                  <p>
-                    <strong>Route ID:</strong> {vehicle.route_id}
-                  </p>
+
+              {route && <p className="vcard-route-name">{route.route_long_name}</p>}
+
+              <div className="vcard-details">
+                {trip && (
+                  <div className="vcard-detail">
+                    <Navigation size={14} />
+                    <span>{trip.trip_headsign}</span>
+                  </div>
                 )}
-                {vehicle.latitude && vehicle.longitude && (
-                  <p>
-                    <strong>Location:</strong> {vehicle.latitude.toFixed(6)},{" "}
-                    {vehicle.longitude.toFixed(6)}
-                  </p>
-                )}
-                {vehicle.speed !== undefined && (
-                  <p>
-                    <strong>Speed:</strong> {vehicle.speed} km/h
-                  </p>
-                )}
-                {vehicle.vehicle_type && (
-                  <p>
-                    <strong>Vehicle Type:</strong> {vehicle.vehicle_type}
-                  </p>
-                )}
-                {vehicle.trip_id && (
-                  <p>
-                    <strong>Trip ID:</strong> {vehicle.trip_id}
-                  </p>
-                )}
-                {vehicle.wheelchair_accessible && (
-                  <p>
-                    <strong>Wheelchair:</strong>{" "}
-                    {vehicle.wheelchair_accessible
-                      .replace("WHEELCHAIR_", "")
-                      .replace("_", " ")}
-                  </p>
-                )}
-                {vehicle.bike_accessible && (
-                  <p>
-                    <strong>Bike:</strong>{" "}
-                    {vehicle.bike_accessible
-                      .replace("BIKE_", "")
-                      .replace("_", " ")}
-                  </p>
-                )}
-                {vehicle.timestamp && (
-                  <p>
-                    <strong>Last Update:</strong>{" "}
-                    {new Date(vehicle.timestamp).toLocaleString()}
-                  </p>
-                )}
+                <div className="vcard-detail">
+                  <Gauge size={14} />
+                  <span className="mono">{vehicle.speed} km/h</span>
+                </div>
+                <div className="vcard-detail">
+                  <Clock size={14} />
+                  <span>{timeAgo(vehicle.timestamp)}</span>
+                </div>
               </div>
-            </div>
-          ))
-        ) : (
-          <div className="vehicle-card">
-            <div className="vehicle-header">
-              <h3>
-                {vehicles.label ? `Vehicle ${vehicles.label}` : "Vehicle"}
-              </h3>
-              <span
-                className={`status ${
-                  vehicles.speed > 0 ? "active" : "inactive"
-                }`}
-              >
-                {vehicles.speed > 0 ? "Active" : "Inactive"}
-              </span>
-            </div>
-            <div className="vehicle-details">
-              <p>
-                <strong>Vehicle ID:</strong> {vehicles.id}
-              </p>
-              {vehicles.route_id && (
-                <p>
-                  <strong>Route ID:</strong> {vehicles.route_id}
-                </p>
-              )}
-              {vehicles.latitude && vehicles.longitude && (
-                <p>
-                  <strong>Location:</strong> {vehicles.latitude.toFixed(6)},{" "}
-                  {vehicles.longitude.toFixed(6)}
-                </p>
-              )}
-              {vehicles.speed !== undefined && (
-                <p>
-                  <strong>Speed:</strong> {vehicles.speed} km/h
-                </p>
-              )}
-              {vehicles.vehicle_type && (
-                <p>
-                  <strong>Vehicle Type:</strong> {vehicles.vehicle_type}
-                </p>
-              )}
-              {vehicles.trip_id && (
-                <p>
-                  <strong>Trip ID:</strong> {vehicles.trip_id}
-                </p>
-              )}
-              {vehicles.wheelchair_accessible && (
-                <p>
-                  <strong>Wheelchair:</strong>{" "}
-                  {vehicles.wheelchair_accessible
-                    .replace("WHEELCHAIR_", "")
-                    .replace("_", " ")}
-                </p>
-              )}
-              {vehicles.bike_accessible && (
-                <p>
-                  <strong>Bike:</strong>{" "}
-                  {vehicles.bike_accessible
-                    .replace("BIKE_", "")
-                    .replace("_", " ")}
-                </p>
-              )}
-              {vehicles.timestamp && (
-                <p>
-                  <strong>Last Update:</strong>{" "}
-                  {new Date(vehicles.timestamp).toLocaleString()}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+
+              <div className="vcard-footer">
+                <span className="vcard-label">#{vehicle.label}</span>
+                <span className="vcard-tap-hint">Click pentru detalii ruta</span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {sortedVehicles.length === 0 && !loading && (
+        <div className="empty-state glass-card">
+          <Bus size={48} strokeWidth={1} />
+          <h3>Niciun vehicul gasit</h3>
+          <p>Incearca sa schimbi filtrele sau termenul de cautare.</p>
+        </div>
+      )}
+    </motion.div>
   );
 };
 

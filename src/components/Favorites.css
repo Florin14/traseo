@@ -1,0 +1,144 @@
+/* ── Empty State ── */
+.fav-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-8) !important;
+  text-align: center;
+  color: var(--text-muted);
+  gap: var(--space-4);
+}
+
+.fav-empty h3 {
+  color: var(--text-secondary);
+  font-size: var(--text-xl);
+}
+
+.fav-empty p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  max-width: 300px;
+}
+
+/* ── Fav List ── */
+.fav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fav-card {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.fav-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fav-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.fav-route-number {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.fav-card-meta {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.fav-route-name {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.fav-partial {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-accent);
+  margin-bottom: var(--space-3);
+}
+
+.fav-partial svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Mini vehicles list */
+.fav-vehicles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-glass);
+}
+
+.fav-vehicle-mini {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+
+.fav-vehicle-dir {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fav-vehicle-speed {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.fav-more {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  padding: var(--space-1) 0;
+}
+
+/* Remove button */
+.fav-remove {
+  align-self: flex-start;
+  padding: var(--space-2);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.fav-remove:hover {
+  color: var(--color-danger);
+}
+
+/* Status dots */
+.rdp-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rdp-status-dot.active { background: var(--color-success); }
+.rdp-status-dot.inactive { background: var(--color-danger); opacity: 0.5; }

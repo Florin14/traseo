@@ -1,292 +1,324 @@
-import { useEffect, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import { getVehicles } from "../store/thunks/get_buses";
-import "./Map.css";
+import { useEffect, useRef, useMemo, useState, useCallback, memo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import { motion } from 'framer-motion';
+import { RefreshCw, Bus, TramFront, Zap, Filter, X, Layers, ArrowRight } from 'lucide-react';
+import { fetchVehicles } from '../store/slices/vehiclesSlice';
+import { fetchRoutes } from '../store/slices/routesSlice';
+import { fetchTrips } from '../store/slices/tripsSlice';
+import { fetchShapes } from '../store/slices/shapesSlice';
+import { getVehicleTypeName, timeAgo } from '../utils/helpers';
+import { useMapTheme } from '../hooks/useMapTheme';
+import './Map.css';
 
-// Fix for default markers in React Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
 
-// Custom vehicle icons
-const createVehicleIcon = (status, type) => {
-  const color = status === "active" ? "#27ae60" : "#e74c3c";
-  const symbol = type === "bus" ? "🚌" : type === "tram" ? "🚊" : "🚐";
+// Icon cache keyed by route name + type + active
+const iconCache = {};
+function getVehicleIcon(routeName, vehicleType, isActive) {
+  const key = `${routeName}-${vehicleType}-${isActive}`;
+  if (iconCache[key]) return iconCache[key];
 
-  return L.divIcon({
-    html: `
-      <div style="
-        background-color: ${color};
-        border: 3px solid white;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        position: relative;
-      ">
-        ${symbol}
-        <div style="
-          position: absolute;
-          bottom: -8px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 6px solid transparent;
-          border-right: 6px solid transparent;
-          border-top: 8px solid ${color};
-        "></div>
-      </div>
-    `,
-    className: "custom-vehicle-icon",
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-    popupAnchor: [0, -40],
+  const colors = {
+    0: { bg: '#10B981', border: '#059669' },
+    3: { bg: '#3B82F6', border: '#2563EB' },
+    11: { bg: '#F59E0B', border: '#D97706' },
+  };
+  const c = colors[vehicleType] || colors[3];
+  const displayText = routeName || '?';
+  const opacity = isActive ? '1' : '0.55';
+  const fontSize = displayText.length > 2 ? '9px' : '11px';
+
+  const icon = L.divIcon({
+    html: `<div class="v-marker ${isActive ? 'v-active' : ''}" style="background:${c.bg};border-color:${c.border};opacity:${opacity}"><span style="font-size:${fontSize}">${displayText}</span></div>`,
+    className: 'v-marker-wrap',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
   });
-};
 
-// Component to update map view based on vehicles (only on initial load)
-const MapUpdater = ({ vehicles }) => {
-  const map = useMap();
-  const hasInitialized = useRef(false);
+  iconCache[key] = icon;
+  return icon;
+}
 
-  useEffect(() => {
-    // Only auto-zoom on the very first load, not on subsequent updates
-    if (vehicles && vehicles.length > 0 && !hasInitialized.current) {
-      const validVehicles = vehicles.filter((v) => v.latitude && v.longitude);
-      if (validVehicles.length > 0) {
-        const bounds = L.latLngBounds(
-          validVehicles.map((v) => [v.latitude, v.longitude])
-        );
-        map.fitBounds(bounds, { padding: [20, 20] });
-        hasInitialized.current = true;
-      }
-    }
-  }, [vehicles, map]);
-
+// Close popups on map click/zoom
+const MapEventHandler = ({ onMapInteraction }) => {
+  useMapEvents({
+    click: onMapInteraction,
+    zoomstart: onMapInteraction,
+    dragstart: onMapInteraction,
+  });
   return null;
 };
 
-const Map = () => {
-  const dispatch = useDispatch();
-  const {
-    data: vehicles,
-    loading,
-    error,
-  } = useSelector((state) => state.vehicles);
-  const intervalRef = useRef(null);
-
+// Auto-fit on first load
+const MapInit = ({ vehicles }) => {
+  const map = useMap();
+  const done = useRef(false);
   useEffect(() => {
-    // Initial fetch
-    dispatch(getVehicles());
-
-    // Set up auto-refresh every 10 seconds
-    intervalRef.current = setInterval(() => {
-      dispatch(getVehicles());
-    }, 10000);
-
-    // Cleanup on unmount
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+    if (vehicles.length > 0 && !done.current) {
+      const valid = vehicles.filter((v) => v.latitude && v.longitude);
+      if (valid.length) {
+        map.fitBounds(L.latLngBounds(valid.map((v) => [v.latitude, v.longitude])), { padding: [40, 40] });
+        done.current = true;
       }
-    };
-  }, [dispatch]);
+    }
+  }, [vehicles, map]);
+  return null;
+};
 
-  const validVehicles =
-    vehicles?.filter((v) => v.latitude && v.longitude) || [];
+// Memoized vehicle marker
+const VehicleMarker = memo(({ vehicle, routeName, isActive, onSelect, isSelected }) => {
+  return (
+    <Marker
+      position={[vehicle.latitude, vehicle.longitude]}
+      icon={getVehicleIcon(routeName, vehicle.vehicle_type, isActive)}
+      eventHandlers={{ click: () => onSelect(vehicle) }}
+    >
+      <Popup className="dark-popup" autoPan={false}>
+        <div className="popup-dark">
+          <div className="popup-dark-header">
+            <span className="popup-dark-route mono">{routeName || '—'}</span>
+            <span className={`badge ${isActive ? 'badge-success' : 'badge-danger'}`}>
+              {isActive ? 'In miscare' : 'Stationat'}
+            </span>
+          </div>
+          <div className="popup-dark-details">
+            <div className="popup-dark-row">
+              <span>Tip</span>
+              <span>{getVehicleTypeName(vehicle.vehicle_type)}</span>
+            </div>
+            <div className="popup-dark-row">
+              <span>Viteza</span>
+              <span className="mono">{vehicle.speed} km/h</span>
+            </div>
+            <div className="popup-dark-row">
+              <span>Vehicul</span>
+              <span className="mono">#{vehicle.label}</span>
+            </div>
+            <div className="popup-dark-row">
+              <span>Actualizat</span>
+              <span>{timeAgo(vehicle.timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+VehicleMarker.displayName = 'VehicleMarker';
 
-  // Add some debugging to see if positions are actually changing
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.3 } },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
+};
+
+const MapView = () => {
+  const dispatch = useDispatch();
+  const { data: vehicles, loading, lastUpdated } = useSelector((s) => s.vehicles);
+  const { data: routes } = useSelector((s) => s.routes);
+  const { data: trips } = useSelector((s) => s.trips);
+  const { data: shapes } = useSelector((s) => s.shapes);
+  const intervalRef = useRef(null);
+  const mapRef = useRef(null);
+  const [typeFilter, setTypeFilter] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+
+  const { theme, tileLayer, cycleTheme } = useMapTheme();
+
   useEffect(() => {
-    if (validVehicles.length > 0) {
-      console.log(
-        "Map update - vehicle positions:",
-        validVehicles.map((v) => ({
-          id: v.id,
-          label: v.label,
-          lat: v.latitude,
-          lng: v.longitude,
-          speed: v.speed,
-          timestamp: v.timestamp,
-        }))
-      );
+    dispatch(fetchVehicles());
+    if (!routes.length) dispatch(fetchRoutes());
+    if (!trips.length) dispatch(fetchTrips());
+    if (!shapes.length) dispatch(fetchShapes());
+    intervalRef.current = setInterval(() => dispatch(fetchVehicles()), 10000);
+    return () => clearInterval(intervalRef.current);
+  }, [dispatch, routes.length, trips.length, shapes.length]);
+
+  const routeMap = useMemo(() => {
+    const m = {};
+    routes.forEach((r) => { m[r.route_id] = r; });
+    return m;
+  }, [routes]);
+
+  const filteredVehicles = useMemo(() => {
+    let v = vehicles.filter((v) => v.latitude && v.longitude);
+    if (typeFilter !== null) v = v.filter((veh) => veh.vehicle_type === typeFilter);
+    return v;
+  }, [vehicles, typeFilter]);
+
+  const activeCount = useMemo(() =>
+    filteredVehicles.filter((v) => v.speed > 0).length,
+    [filteredVehicles]
+  );
+
+  // Build shape polyline for selected vehicle's route
+  const selectedRouteShape = useMemo(() => {
+    if (!selectedVehicle || !shapes.length || !trips.length) return null;
+
+    // Find the trip for this vehicle
+    const vehicleTrip = trips.find((t) => t.trip_id === selectedVehicle.trip_id);
+    if (!vehicleTrip) return null;
+
+    // Find shape points for this trip's shape
+    const shapeId = vehicleTrip.shape_id;
+    const shapePoints = shapes
+      .filter((s) => s.shape_id === shapeId)
+      .sort((a, b) => a.shape_pt_sequence - b.shape_pt_sequence)
+      .map((s) => [s.shape_pt_lat, s.shape_pt_lon]);
+
+    if (shapePoints.length === 0) return null;
+
+    const route = routeMap[selectedVehicle.route_id];
+    const color = route?.route_type === 0 ? '#10B981'
+      : route?.route_type === 11 ? '#F59E0B'
+      : '#3B82F6';
+
+    return { points: shapePoints, color, routeName: route?.route_short_name, direction: vehicleTrip.trip_headsign };
+  }, [selectedVehicle, shapes, trips, routeMap]);
+
+  const handleMapInteraction = useCallback(() => {
+    if (mapRef.current) {
+      mapRef.current.closePopup();
     }
-  }, [validVehicles]);
+  }, []);
 
-  const getVehicleStatus = (vehicle) => {
-    return vehicle.speed > 0 ? "active" : "inactive";
-  };
+  const handleSelectVehicle = useCallback((vehicle) => {
+    setSelectedVehicle((prev) => prev?.id === vehicle.id ? null : vehicle);
+  }, []);
 
-  const getVehicleType = (vehicleType) => {
-    // Map vehicle type numbers to names
-    switch (vehicleType) {
-      case 1:
-        return "bus";
-      case 2:
-        return "tram";
-      case 3:
-        return "bus";
-      default:
-        return "vehicle";
-    }
-  };
+  const clearSelection = useCallback(() => {
+    setSelectedVehicle(null);
+    if (mapRef.current) mapRef.current.closePopup();
+  }, []);
 
-  // Default center (you can adjust this to your city)
-  const defaultCenter = [44.4268, 26.1025]; // Bucharest coordinates
-
-  if (loading && (!vehicles || vehicles.length === 0)) {
-    return (
-      <div className="map-container">
-        <div className="map-loading">
-          <div className="spinner"></div>
-          <p>Loading map and vehicles...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="map-container">
-        <div className="map-error">
-          <h2>Error loading map data</h2>
-          <p>
-            {error.message ||
-              "Something went wrong while fetching vehicle data."}
-          </p>
-          <button
-            onClick={() => dispatch(getVehicles())}
-            className="retry-button"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const clujCenter = [46.7712, 23.6236];
 
   return (
-    <div className="map-container">
-      <div className="map-header">
-        <h1>Live Vehicle Tracking</h1>
-        <div className="map-controls">
-          <div className="vehicle-stats">
-            <span className="stat">
-              <span className="stat-number">{validVehicles.length}</span>
-              <span className="stat-label">Total Vehicles</span>
-            </span>
-            <span className="stat">
-              <span className="stat-number">
-                {validVehicles.filter((v) => v.speed > 0).length}
-              </span>
-              <span className="stat-label">Active</span>
-            </span>
-            <span className="stat">
-              <span className="stat-number">
-                {validVehicles.filter((v) => v.speed === 0).length}
-              </span>
-              <span className="stat-label">Inactive</span>
-            </span>
-          </div>
-          <button
-            onClick={() => dispatch(getVehicles())}
-            className="refresh-button"
-            disabled={loading}
-          >
-            {loading ? "Refreshing..." : "Refresh Now"}
-          </button>
-          {loading && (
-            <div className="refresh-indicator">
-              <div className="refresh-dot"></div>
-              Updating...
-            </div>
-          )}
+    <motion.div className="page-map" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+      {/* Stats Bar */}
+      <div className="map-float-stats glass-heavy">
+        <div className="map-stat">
+          <span className="mono map-stat-value">{filteredVehicles.length}</span>
+          <span className="map-stat-label">Total</span>
+        </div>
+        <div className="map-stat-divider" />
+        <div className="map-stat">
+          <span className="mono map-stat-value" style={{ color: 'var(--color-success)' }}>{activeCount}</span>
+          <span className="map-stat-label">Active</span>
+        </div>
+        <div className="map-stat-divider" />
+        <div className="map-stat">
+          <div className="live-dot" />
+          <span className="map-stat-label mono">{lastUpdated ? timeAgo(lastUpdated) : '...'}</span>
         </div>
       </div>
 
-      <div className="map-wrapper">
-        <MapContainer
-          center={defaultCenter}
-          zoom={12}
-          style={{ height: "100%", width: "100%" }}
-          className="leaflet-map"
+      {/* Controls */}
+      <div className="map-float-controls">
+        <button className="map-control-btn glass-heavy" onClick={() => dispatch(fetchVehicles())} disabled={loading} title="Reincarca">
+          <RefreshCw size={18} className={loading ? 'spinning' : ''} />
+        </button>
+        <button className={`map-control-btn glass-heavy ${showFilters ? 'active' : ''}`} onClick={() => setShowFilters(!showFilters)} title="Filtre">
+          <Filter size={18} />
+        </button>
+        <button className="map-control-btn glass-heavy" onClick={cycleTheme} title={`Tema: ${tileLayer.label}`}>
+          <Layers size={18} />
+        </button>
+      </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <motion.div className="map-filter-panel glass-heavy" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+          <div className="filter-header">
+            <span>Filtre</span>
+            <button onClick={() => setShowFilters(false)}><X size={16} /></button>
+          </div>
+          <div className="filter-options">
+            <button className={`filter-chip ${typeFilter === null ? 'active' : ''}`} onClick={() => setTypeFilter(null)}>Toate</button>
+            <button className={`filter-chip bus-chip ${typeFilter === 3 ? 'active' : ''}`} onClick={() => setTypeFilter(typeFilter === 3 ? null : 3)}>
+              <Bus size={14} /> Autobuze
+            </button>
+            <button className={`filter-chip tram-chip ${typeFilter === 0 ? 'active' : ''}`} onClick={() => setTypeFilter(typeFilter === 0 ? null : 0)}>
+              <TramFront size={14} /> Tramvaie
+            </button>
+            <button className={`filter-chip trolley-chip ${typeFilter === 11 ? 'active' : ''}`} onClick={() => setTypeFilter(typeFilter === 11 ? null : 11)}>
+              <Zap size={14} /> Troleibuze
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Route info bar when vehicle selected */}
+      {selectedVehicle && selectedRouteShape && (
+        <motion.div
+          className="map-route-info glass-heavy"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          <div className="route-info-content">
+            <span className="route-info-number mono" style={{ color: selectedRouteShape.color }}>
+              {selectedRouteShape.routeName}
+            </span>
+            <ArrowRight size={14} className="route-info-arrow" />
+            <span className="route-info-direction">{selectedRouteShape.direction}</span>
+          </div>
+          <button className="route-info-close" onClick={clearSelection}><X size={14} /></button>
+        </motion.div>
+      )}
+
+      {/* Map */}
+      <MapContainer
+        center={clujCenter}
+        zoom={13}
+        style={{ height: '100%', width: '100%' }}
+        zoomControl={false}
+        attributionControl={false}
+        ref={mapRef}
+        preferCanvas={true}
+      >
+        <TileLayer
+          key={theme}
+          url={tileLayer.url}
+          attribution={tileLayer.attribution}
+        />
+        <MapInit vehicles={filteredVehicles} />
+        <MapEventHandler onMapInteraction={handleMapInteraction} />
+
+        {/* Route shape polyline */}
+        {selectedRouteShape && (
+          <Polyline
+            positions={selectedRouteShape.points}
+            pathOptions={{
+              color: selectedRouteShape.color,
+              weight: 4,
+              opacity: 0.8,
+              dashArray: null,
+            }}
           />
+        )}
 
-          <MapUpdater vehicles={validVehicles} />
-
-          {validVehicles.map((vehicle) => (
-            <Marker
-              key={`${vehicle.id}-${vehicle.timestamp}`}
-              position={[vehicle.latitude, vehicle.longitude]}
-              icon={createVehicleIcon(
-                getVehicleStatus(vehicle),
-                getVehicleType(vehicle.vehicle_type)
-              )}
-            >
-              <Popup className="vehicle-popup">
-                <div className="popup-content">
-                  <h3>Vehicle {vehicle.label}</h3>
-                  <div className="popup-details">
-                    <p>
-                      <strong>Route:</strong> {vehicle.route_id || "N/A"}
-                    </p>
-                    <p>
-                      <strong>Speed:</strong> {vehicle.speed} km/h
-                    </p>
-                    <p>
-                      <strong>Status:</strong>
-                      <span
-                        className={`status-badge ${getVehicleStatus(vehicle)}`}
-                      >
-                        {vehicle.speed > 0 ? "Moving" : "Stopped"}
-                      </span>
-                    </p>
-                    <p>
-                      <strong>Last Update:</strong>{" "}
-                      {new Date(vehicle.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-      </div>
-
-      <div className="map-legend">
-        <h4>Legend</h4>
-        <div className="legend-items">
-          <div className="legend-item">
-            <span className="legend-icon active">🚌</span>
-            <span>Active Vehicle</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-icon inactive">🚌</span>
-            <span>Inactive Vehicle</span>
-          </div>
-          <div className="legend-note">
-            <small>Map updates automatically every 10 seconds</small>
-          </div>
-        </div>
-      </div>
-    </div>
+        {/* Vehicle markers */}
+        {filteredVehicles.map((vehicle) => {
+          const route = routeMap[vehicle.route_id];
+          const isActive = vehicle.speed > 0;
+          return (
+            <VehicleMarker
+              key={vehicle.id}
+              vehicle={vehicle}
+              routeName={route?.route_short_name || ''}
+              isActive={isActive}
+              onSelect={handleSelectVehicle}
+              isSelected={selectedVehicle?.id === vehicle.id}
+            />
+          );
+        })}
+      </MapContainer>
+    </motion.div>
   );
 };
 
-export default Map;
+export default MapView;

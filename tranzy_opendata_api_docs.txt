@@ -1,0 +1,278 @@
+================================================================================
+        TRANZY OPENDATA API - DOCUMENTATIE COMPLETA
+        Versiune: v1.0-BETA
+        Data extragerii: 02 Aprilie 2026
+        Sursa: https://api.tranzy.ai/v1/opendata/docs
+================================================================================
+
+--------------------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------------------
+
+Nume API       : Tranzy OpenData API
+Versiune       : v1.0-BETA
+API Base URL   : https://api.tranzy.ai/v1/opendata (Production / prod)
+
+Descriere:
+  Aceasta API implementeaza partial specificatia GTFS (General Transit Feed
+  Specification). Mai multe detalii despre GTFS la: https://gtfs.org/
+
+ATENTIE (Warning):
+  Aceasta API se afla in versiunea BETA si este susceptibila la modificari
+  fara notificare prealabila.
+
+  Raportare bug-uri / probleme:
+    https://apps.tranzy.ai/accounts/contact
+
+  Termeni si conditii:
+    https://apps.tranzy.ai/accounts/terms-and-conditions
+
+Autentificare:
+  Toate endpoint-urile necesita un API Key transmis prin header-ul:
+    X-API-KEY: <cheia_ta_api>
+
+Coduri de raspuns comune:
+  200 - Success
+  403 - Forbidden (API key invalid sau lipsa)
+  429 - Too Many Requests (rate limit depasit)
+  500 - Internal Server Error
+
+
+================================================================================
+2. ENDPOINTS
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 AGENCY (Grupul Agency)
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/agency
+Scop     : Returneaza o lista cu agentiile de transport (transit brands).
+
+Descriere detaliata:
+  O agentie de transport reprezinta un "brand" de tranzit. In unele cazuri,
+  o singura agentie opereaza mai multe servicii separate, deci agentiile si
+  brandurile sunt distincte. Un dataset poate contine date de la mai multe
+  agentii.
+  Mai multe detalii: https://gtfs.org/schedule/reference/#agencytxt
+
+REQUEST:
+  Metoda: GET
+  Autentificare: API Key (header X-API-KEY)
+  Nu are parametri suplimentari.
+
+  cURL Example:
+    curl --request GET \
+         --url https://api.tranzy.ai/v1/opendata/agency \
+         --header 'Accept: application/json' \
+         --header 'X-API-KEY: 123'
+
+RESPONSE (200 OK):
+  Content-Type: application/json
+  Format: Array de obiecte Agency
+
+  Campuri returnate:
+  - agency_id       (number, required) - Identificator unic al agentiei
+  - agency_name     (string, required) - Numele complet al agentiei
+  - agency_timezone (string, required) - Fusul orar al agentiei
+  - agency_lang     (string|null)      - Limba primara folosita
+  - agency_url      (string|null)      - URL-ul agentiei
+  - agency_urls     (array[string]|null) - Lista de URL-uri
+
+  Exemplu raspuns:
+  [
+    {
+      "agency_id": 0,
+      "agency_name": "string",
+      "agency_timezone": "string",
+      "agency_lang": "string",
+      "agency_url": "string",
+      "agency_urls": ["string"]
+    }
+  ]
+
+
+================================================================================
+3. ENDPOINTS PROXY
+================================================================================
+
+Grupul Proxy contine endpoint-uri care ofera date de pozitie in timp real
+(Vehicle Positions) si date statice de orar (Routes, Trips, Shapes, Stops,
+Stop times). Toate endpoint-urile Proxy necesita header-ul X-Agency-Id pentru
+a filtra datele pe agentie.
+
+--------------------------------------------------------------------------------
+3.1 PROXY - VEHICLES
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/vehicles
+Scop     : Returneaza pozitia in timp real a vehiculelor dintr-o agentie.
+
+REQUEST:
+  Metoda: GET
+  Headers: X-API-KEY (required), X-Agency-Id (optional)
+
+RESPONSE (200 OK):
+  Campuri returnate:
+  - id                    (string, required) - ID intern vehicul
+  - label                 (string, required) - Eticheta vehicul (vizibila)
+  - latitude              (number, required) - Latitudinea
+  - longitude             (number, required) - Longitudinea
+  - timestamp             (string, required) - Data/ora ultimei actualizari
+  - vehicle_type          (number, required) - Tipul vehiculului:
+      0=Tram, 1=Subway, 2=Rail, 3=Bus, 4=Ferry, 5=Cable tram,
+      6=Aerial lift, 7=Funicular, 11=Trolleybus, 12=Monorail
+  - bike_accessible       (string, required) - UNKNOWN/BIKE_INACCESSIBLE/BIKE_ACCESSIBLE
+  - wheelchair_accessible (string, required) - NO_VALUE/UNKNOWN/WHEELCHAIR_ACCESSIBLE/WHEELCHAIR_INACCESSIBLE
+  - speed                 (number, required) - Viteza curenta
+  - route_id              (number, required) - ID-ul rutei
+  - trip_id               (string, optional) - ID-ul calatoriei curente
+
+--------------------------------------------------------------------------------
+3.2 PROXY - ROUTES
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/routes
+Scop     : Returneaza lista rutelor unei agentii de transport.
+
+REQUEST:
+  Metoda: GET
+  Headers: X-API-KEY (required), X-Agency-Id (optional)
+
+RESPONSE (200 OK):
+  Campuri returnate:
+  - route_id         (number, required) - ID unic ruta
+  - agency_id        (number, required) - ID agentie
+  - route_short_name (string, required) - Numele scurt (ex: "32", "100X")
+  - route_long_name  (string, required) - Numele complet/descriptiv
+  - route_color      (string, required) - Culoarea rutei (cod hex)
+  - route_type       (number, required) - Tipul de transport (coduri GTFS):
+      0=Tram, 1=Subway, 2=Rail, 3=Bus, 4=Ferry, 5=Cable tram,
+      6=Aerial lift, 7=Funicular, 11=Trolleybus, 12=Monorail
+  - route_text_color (string, required) - Culoarea textului (hex)
+
+--------------------------------------------------------------------------------
+3.3 PROXY - TRIPS
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/trips
+Scop     : Returneaza lista calatoriilor (trips) unei agentii.
+
+Descriere:
+  Un trip este o calatorie pe o ruta specifica intr-o anumita directie.
+  Mai multe detalii: https://gtfs.org/schedule/reference/#tripstxt
+
+REQUEST:
+  Metoda: GET
+  Headers: X-API-KEY (required), X-Agency-Id (optional)
+
+RESPONSE (200 OK):
+  Campuri returnate:
+  - trip_id        (string, required) - ID unic calatorie
+  - route_id       (number, required) - ID ruta asociata
+  - trip_headsign  (string, required) - Text cu directia/destinatia
+  - direction_id   (number, required) - Directia calatoriei (0 sau 1)
+  - shape_id       (string, required) - ID forma traseului pe harta
+  - block_id       (string, optional) - Block ID
+
+--------------------------------------------------------------------------------
+3.4 PROXY - SHAPES
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/shapes
+Scop     : Returneaza formele traseelor (polyline pe harta).
+
+Descriere:
+  Shape-urile descriu traseul pe care il urmeaza un vehicul pe harta.
+  Sunt definite ca o secventa de puncte GPS.
+  Mai multe detalii: https://gtfs.org/schedule/reference/#shapestxt
+
+REQUEST:
+  Metoda: GET
+  Headers: X-API-KEY (required), X-Agency-Id (optional)
+
+RESPONSE (200 OK):
+  Campuri returnate:
+  - shape_id            (string, required) - ID forma traseu
+  - shape_pt_lat        (number, required) - Latitudine punct
+  - shape_pt_lon        (number, required) - Longitudine punct
+  - shape_pt_sequence   (number, required) - Ordinea punctului in secventa
+  - shape_dist_traveled (number, required) - Distanta parcursa pana la punct
+
+--------------------------------------------------------------------------------
+3.5 PROXY - STOPS
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/stops
+Scop     : Returneaza lista statiilor unei agentii.
+
+Descriere:
+  Statiile sunt locatiile unde vehiculele opresc si iau/coboara calatori.
+  Mai multe detalii: https://gtfs.org/schedule/reference/#stopstxt
+
+REQUEST:
+  Metoda: GET
+  Headers: X-API-KEY (required), X-Agency-Id (optional)
+
+RESPONSE (200 OK):
+  Campuri returnate:
+  - stop_id   (number, required) - ID unic statie
+  - stop_name (string, required) - Numele statiei
+  - stop_lat  (number, required) - Latitudinea statiei
+  - stop_lon  (number, required) - Longitudinea statiei
+
+--------------------------------------------------------------------------------
+3.6 PROXY - STOP TIMES
+--------------------------------------------------------------------------------
+
+Endpoint : GET https://api.tranzy.ai/v1/opendata/stop_times
+Scop     : Returneaza orarul de sosire/plecare pentru fiecare statie.
+
+Descriere:
+  Stop times definesc cand un vehicul ajunge si pleaca de la o statie
+  in cadrul unui trip specific.
+  Mai multe detalii: https://gtfs.org/schedule/reference/#stop_timestxt
+
+REQUEST:
+  Metoda: GET
+  Headers: X-API-KEY (required), X-Agency-Id (optional)
+
+RESPONSE (200 OK):
+  Campuri returnate:
+  - trip_id             (string, required) - ID calatorie
+  - arrival_time        (string, required) - Ora sosire la statie (HH:MM:SS)
+  - departure_time      (string, required) - Ora plecare din statie (HH:MM:SS)
+  - stop_id             (number, required) - ID statie
+  - stop_sequence       (number, required) - Ordinea statiei in trip
+  - stop_headsign       (string, required) - Text destinatie la statie
+  - pickup_type         (number, required) - Tip urcare:
+      0=Regular, 1=Nu se opreste, 2=Telefon agentie, 3=Coordonare sofer
+  - drop_off_type       (number, required) - Tip coborare:
+      0=Regular, 1=Nu se opreste, 2=Telefon agentie, 3=Coordonare sofer
+
+================================================================================
+4. RELATII INTRE ENTITATI (Data Model)
+================================================================================
+
+Agency (1) ---> (N) Routes      : O agentie are mai multe rute
+Route  (1) ---> (N) Trips       : O ruta are mai multe calatorii
+Trip   (1) ---> (1) Shape       : O calatorie are o forma de traseu
+Trip   (1) ---> (N) Stop Times  : O calatorie are mai multe opriri programate
+Stop   (1) ---> (N) Stop Times  : O statie apare in mai multe calatorii
+Vehicle      ---> Trip          : Un vehicul circula pe un trip (trip_id)
+Vehicle      ---> Route         : Un vehicul circula pe o ruta (route_id)
+
+================================================================================
+5. NOTE IMPORTANTE
+================================================================================
+
+- Vehicles endpoint returneaza date REAL-TIME (pozitii GPS live)
+- Routes, Trips, Shapes, Stops, Stop Times sunt date STATICE (orar fix)
+- Agency ID 2 = CTP Cluj-Napoca
+- Rate limiting se aplica pe toate endpoint-urile
+- API Key-ul trebuie trimis in header-ul X-API-KEY
+- X-Agency-Id filtreaza datele pe agentie specifica
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
