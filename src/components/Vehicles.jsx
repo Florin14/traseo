@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Search, Bus, TramFront, Zap, Gauge, Clock, X, ArrowRight, MapPin, Navigation } from 'lucide-react';
 import { fetchVehicles } from '../store/slices/vehiclesSlice';
 import { fetchRoutes } from '../store/slices/routesSlice';
 import { fetchTrips } from '../store/slices/tripsSlice';
-import { fetchStops } from '../store/slices/stopsSlice';
-import { fetchShapes } from '../store/slices/shapesSlice';
-import { getVehicleTypeName, getVehicleTypeBadgeClass, timeAgo, haversineDistance } from '../utils/helpers';
+import { getVehicleTypeName, getVehicleTypeBadgeClass, timeAgo } from '../utils/helpers';
 import './Vehicles.css';
 
 const pageVariants = {
@@ -21,32 +19,21 @@ const cardVariants = {
   animate: { opacity: 1, y: 0 },
 };
 
-// Estimate ETA: distance along shape / average speed
-function estimateETA(vehicle, stopLat, stopLon) {
-  if (!vehicle.latitude || !stopLat) return null;
-  const dist = haversineDistance(vehicle.latitude, vehicle.longitude, stopLat, stopLon);
-  const speed = vehicle.speed > 3 ? vehicle.speed : 15; // assume 15 km/h if stopped
-  const minutes = Math.round((dist / speed) * 60);
-  return Math.max(1, minutes);
-}
-
 const Vehicles = () => {
   const dispatch = useDispatch();
   const { data: vehicles, loading } = useSelector((s) => s.vehicles);
   const { data: routes } = useSelector((s) => s.routes);
   const { data: trips } = useSelector((s) => s.trips);
-  const { data: stops } = useSelector((s) => s.stops);
-  const { data: stopTimesData } = useSelector((s) => s.shapes); // we'll use stops directly
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
+  const detailPanelRef = useRef(null);
 
   useEffect(() => {
     if (!vehicles.length) dispatch(fetchVehicles());
     if (!routes.length) dispatch(fetchRoutes());
     if (!trips.length) dispatch(fetchTrips());
-    if (!stops.length) dispatch(fetchStops());
-  }, [dispatch, vehicles.length, routes.length, trips.length, stops.length]);
+  }, [dispatch, vehicles.length, routes.length, trips.length]);
 
   const routeMap = useMemo(() => {
     const m = {};
@@ -109,7 +96,14 @@ const Vehicles = () => {
   const handleCardClick = (vehicle) => {
     const route = routeMap[vehicle.route_id];
     if (!route) return;
-    setSelectedRoute(selectedRoute?.route_id === route.route_id ? null : route);
+    const isToggleOff = selectedRoute?.route_id === route.route_id;
+    setSelectedRoute(isToggleOff ? null : route);
+    // Scroll to detail panel when opening
+    if (!isToggleOff) {
+      setTimeout(() => {
+        detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   };
 
   return (
@@ -152,6 +146,7 @@ const Vehicles = () => {
       <AnimatePresence>
         {selectedRoute && (
           <motion.div
+            ref={detailPanelRef}
             className="route-detail-panel glass-card"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}

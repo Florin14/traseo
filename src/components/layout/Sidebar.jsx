@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Map, Bus, Route, Star } from 'lucide-react';
+import { Home, Map, Bus, Route, Star, Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Sidebar.css';
 
@@ -9,6 +9,7 @@ const navItems = [
   { path: '/vehicles', icon: Bus, label: 'Vehicule' },
   { path: '/routes', icon: Route, label: 'Rute' },
   { path: '/favorites', icon: Star, label: 'Favorite' },
+  { path: '/assistant', icon: Bot, label: 'Asistent' },
 ];
 
 const Sidebar = () => {

@@ -84,6 +84,7 @@ Vehicle     ──→ Route (route_id)
 |-----|----------|
 | `traseo_favorites` | Array de favorite: route (rută completă) sau partial_route (interval stații) |
 | `traseo_map_theme` | Tema hartă: 'streets', 'dark', sau 'light' |
+| `traseo_trips` | Array călătorii: { id, date, cost, routeName, routeId, note } |
 
 ---
 
@@ -285,11 +286,29 @@ traseo/
 - **Sidebar vertical** pe desktop, bottom tab bar pe mobile
 - **Responsive** complet pe toate breakpoints
 
+#### Asistent Transit (/assistant)
+- **Insights auto-generate**:
+  - Economii față de taxi (estimare 15 RON/călătorie)
+  - Recomandare abonament vs bilete individuale (prag: 100 RON/lună)
+  - Trend cheltuieli luna curentă vs luna trecută
+  - Status vehicule pe rutele favorite
+  - Ruta cea mai folosită
+- **Cost Tracker**:
+  - Adăugare rapidă călătorii (3 RON/bilet)
+  - Quick-add din rute frecvente și favorite
+  - Statistici lunare: total, nr călătorii, medie/zi, proiecție
+  - Bară vizuală bilete vs abonament
+  - Istoric călătorii cu ștergere
+- **Route Finder**:
+  - Caută rute directe între 2 stații
+  - Autocomplete stații cu search
+  - Rezultate sortate după cel mai puțin opriri
+  - Afișează tip vehicul, direcție, nr stații
+
 ### Planificate (v3)
 
-- **ETA Calculator** - estimare timp sosire din GPS vehicul + distanță stație
-- **Cost Tracker** - jurnal cheltuieli bilete cu statistici lunare
-- **My Commute** - salvare traseu frecvent (ex: Aleea Muscel → Strada Paris)
+- **ETA Calculator** avansat - estimare pe baza shapes + viteza curentă
+- **My Commute** - traseu zilnic salvat cu notificări
 - **Notificări vehicul** - alertă când vehiculul se apropie de stație
 - **PWA** - Add to Home Screen, cache offline
 
