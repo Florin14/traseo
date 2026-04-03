@@ -4,6 +4,7 @@
   position: relative;
   height: 100vh;
   width: 100%;
+  isolation: isolate;
 }
 
 /* ── Vehicle Markers ── */
@@ -184,10 +185,12 @@
   background: none;
   border: none;
   outline: none;
+  padding: 0;
   width: 100%;
   color: var(--text-primary);
   font-size: var(--text-sm);
   font-family: var(--font-mono);
+  border-radius: 0;
 }
 
 .map-route-search input::placeholder { color: var(--text-muted); }
@@ -313,7 +316,7 @@
   .map-control-btn { width: 38px; height: 38px; }
   .map-filter-panel { top: calc(var(--space-2) + 180px); right: var(--space-2); }
   .map-route-info {
-    bottom: var(--space-4);
+    bottom: var(--space-3);
     padding: var(--space-2) var(--space-4);
   }
 }

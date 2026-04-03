@@ -29,6 +29,7 @@
   overflow-x: hidden;
   margin-left: var(--sidebar-width);
   position: relative;
+  isolation: isolate;
 }
 
 /* ── Page wrapper (used by framer-motion) ── */

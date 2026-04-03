@@ -122,10 +122,10 @@
   /* ── Z-index layers ── */
   --z-map: 0;
   --z-overlay: 10;
-  --z-sidebar: 20;
-  --z-navbar: 30;
-  --z-modal: 40;
-  --z-toast: 50;
+  --z-sidebar: 900;
+  --z-navbar: 900;
+  --z-modal: 950;
+  --z-toast: 1000;
 
   /* ── Layout ── */
   --sidebar-width: 72px;
