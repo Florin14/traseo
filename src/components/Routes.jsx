@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Search, Bus, TramFront, Zap, ChevronRight, X, Navigation, MapPin, Gauge, Clock, Star, ArrowRight } from 'lucide-react';
@@ -7,7 +7,7 @@ import { fetchVehicles } from '../store/slices/vehiclesSlice';
 import { fetchTrips } from '../store/slices/tripsSlice';
 import { fetchStops } from '../store/slices/stopsSlice';
 import { fetchStopTimes } from '../store/slices/stopTimesSlice';
-import { getVehicleTypeName, getRouteTypeBadgeClass, timeAgo } from '../utils/helpers';
+import { getVehicleTypeName, getRouteTypeBadgeClass, timeAgo, computeStopETAs } from '../utils/helpers';
 import { useFavorites } from '../hooks/useFavorites';
 import './Routes.css';
 
@@ -36,6 +36,7 @@ const RoutesPage = () => {
   const [partialTo, setPartialTo] = useState(null);
   const [partialDir, setPartialDir] = useState(null);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const detailPanelRef = useRef(null);
 
   useEffect(() => {
     if (!routes.length) dispatch(fetchRoutes());
@@ -80,12 +81,10 @@ const RoutesPage = () => {
       );
     }
     r.sort((a, b) => {
-      const aCount = vehiclesByRoute[a.route_id]?.length || 0;
-      const bCount = vehiclesByRoute[b.route_id]?.length || 0;
-      if (aCount !== bCount) return bCount - aCount;
       const aNum = parseInt(a.route_short_name) || 999;
       const bNum = parseInt(b.route_short_name) || 999;
-      return aNum - bNum;
+      if (aNum !== bNum) return aNum - bNum;
+      return (a.route_short_name || '').localeCompare(b.route_short_name || '');
     });
     return r;
   }, [routes, typeFilter, search, vehiclesByRoute]);
@@ -122,6 +121,24 @@ const RoutesPage = () => {
 
   const routeVehicles = vehiclesByRoute[selectedRouteId] || [];
 
+  // Compute ETAs per direction for the selected route
+  const directionETAs = useMemo(() => {
+    if (!selectedRouteId || !routeVehicles.length || !Object.keys(routeStops).length) return {};
+
+    const result = {};
+    Object.entries(routeStops).forEach(([dirId, dir]) => {
+      // Get vehicles going in this direction
+      const dirVehicles = routeVehicles.filter((v) => {
+        const trip = tripMap[v.trip_id];
+        return trip && trip.direction_id === parseInt(dirId);
+      });
+      if (dirVehicles.length > 0) {
+        result[dirId] = computeStopETAs(dirVehicles, dir.stops, stopMap, tripMap);
+      }
+    });
+    return result;
+  }, [selectedRouteId, routeVehicles, routeStops, tripMap, stopMap]);
+
   return (
     <motion.div className="page" variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <motion.div className="page-header" variants={cardVariants}>
@@ -157,6 +174,7 @@ const RoutesPage = () => {
       <AnimatePresence>
         {selectedRoute && (
           <motion.div
+            ref={detailPanelRef}
             className="route-detail-panel glass-card"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -290,6 +308,7 @@ const RoutesPage = () => {
                       const isFrom = isThisDir && st.stop_id === partialFrom;
                       const isTo = isThisDir && st.stop_id === partialTo;
                       const inRange = isThisDir && fromIdx >= 0 && toIdx >= 0 && idx >= fromIdx && idx <= toIdx;
+                      const stopETA = directionETAs[dirId]?.[st.stop_id];
 
                       return (
                         <div
@@ -327,9 +346,23 @@ const RoutesPage = () => {
                           </div>
                           <div className="stop-timeline-content">
                             <span className="stop-name">{st.stop?.stop_name || `Statie #${st.stop_id}`}</span>
-                            {(isFrom || isTo) && (
-                              <span className="stop-marker-label">{isFrom ? 'De la' : 'Pana la'}</span>
-                            )}
+                            <div className="stop-meta">
+                              {stopETA && stopETA.eta > 0 && (
+                                <span className="stop-eta" title={`Vehicul #${stopETA.vehicleLabel}`}>
+                                  <Clock size={12} />
+                                  ~{stopETA.eta} min
+                                </span>
+                              )}
+                              {stopETA && stopETA.eta === 0 && (
+                                <span className="stop-eta stop-eta-now">
+                                  <Clock size={12} />
+                                  acum
+                                </span>
+                              )}
+                              {(isFrom || isTo) && (
+                                <span className="stop-marker-label">{isFrom ? 'De la' : 'Pana la'}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -353,7 +386,15 @@ const RoutesPage = () => {
               className={`route-card glass-card ${isSelected ? 'card-highlighted' : ''}`}
               variants={cardVariants}
               layout
-              onClick={() => setSelectedRouteId(isSelected ? null : route.route_id)}
+              onClick={() => {
+                const newId = isSelected ? null : route.route_id;
+                setSelectedRouteId(newId);
+                if (newId) {
+                  setTimeout(() => {
+                    detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
+                }
+              }}
             >
               <div className="rcard-left">
                 <div

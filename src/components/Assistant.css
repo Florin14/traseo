@@ -323,9 +323,11 @@
   background: none;
   border: none;
   outline: none;
+  padding: 0;
   width: 100%;
   color: var(--text-primary);
   font-size: var(--text-sm);
+  border-radius: 0;
 }
 .rf-input-wrap input::placeholder { color: var(--text-muted); }
 

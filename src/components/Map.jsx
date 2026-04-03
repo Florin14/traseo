@@ -183,6 +183,20 @@ const MapView = () => {
     setSelectedVehicle((prev) => prev?.id === vehicle.id ? null : vehicle);
   }, []);
 
+  // Fit map to route shape when selected
+  useEffect(() => {
+    if (selectedRouteShape && mapRef.current) {
+      const bounds = L.latLngBounds(selectedRouteShape.points);
+      const isMobile = window.innerWidth <= 768;
+      mapRef.current.fitBounds(bounds, {
+        padding: isMobile ? [40, 40] : [60, 60],
+        paddingBottomRight: isMobile ? [40, 100] : [60, 60],
+        maxZoom: 15,
+        animate: true,
+      });
+    }
+  }, [selectedRouteShape]);
+
   const clearSelection = useCallback(() => {
     setSelectedVehicle(null);
     mapRef.current?.closePopup();
@@ -360,18 +374,23 @@ const MapView = () => {
           </>
         )}
 
-        {/* Route shape: outline + colored line + direction arrows */}
+        {/* Route shape: glow + outline + colored line + direction arrows */}
         {selectedRouteShape && (
           <>
-            {/* Dark outline for contrast on any map theme */}
+            {/* Outer glow for visibility on any theme */}
             <Polyline
               positions={selectedRouteShape.points}
-              pathOptions={{ color: '#000000', weight: 8, opacity: 0.4, lineCap: 'round', lineJoin: 'round' }}
+              pathOptions={{ color: selectedRouteShape.color, weight: 16, opacity: 0.2, lineCap: 'round', lineJoin: 'round' }}
+            />
+            {/* Dark outline for contrast */}
+            <Polyline
+              positions={selectedRouteShape.points}
+              pathOptions={{ color: '#000000', weight: 10, opacity: 0.5, lineCap: 'round', lineJoin: 'round' }}
             />
             {/* Main colored line */}
             <Polyline
               positions={selectedRouteShape.points}
-              pathOptions={{ color: selectedRouteShape.color, weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }}
+              pathOptions={{ color: selectedRouteShape.color, weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
             />
             {/* Direction arrows on top */}
             <DirectionArrows

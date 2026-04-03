@@ -345,12 +345,38 @@
   background: var(--accent-start) !important;
 }
 
+.stop-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.stop-eta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-accent);
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  background: var(--color-info-dim);
+  border-radius: var(--radius-full);
+}
+
+.stop-eta-now {
+  color: var(--color-success);
+  background: var(--color-success-dim);
+}
+
 .stop-marker-label {
   font-size: var(--text-xs);
   color: var(--accent-start);
   font-weight: 600;
   flex-shrink: 0;
-  margin-left: var(--space-2);
 }
 
 /* ── Responsive ── */
